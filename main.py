@@ -58,17 +58,16 @@ async def stop_task(data):
     try:
         if mid == '':
             raise Exception('缺少ID, 停止任务 {} 失败'.format(data["name"]))
-        if data["format"] == "Docker镜像":
-            container_name = running_container.get(mid, '')
-            if container_name != '':
-                if await docker_stop(container_name):
-                    console_log('训练任务停止成功', 2)
-                    await sio.emit('task_states_update', {'uid': uid, 'mid': mid, 'status': '-1'})
-                    return
-            running_container.pop(mid)
+
+        container_name = running_container.get(mid, '')
+        if container_name != '':
+            running_container.pop(mid, '')
+            if await docker_stop(container_name):
+                console_log('训练任务停止成功', 2)
+                await sio.emit('task_states_update', {'uid': uid, 'mid': mid, 'status': '-1'})
+                return
             raise Exception('训练任务停止失败')
-        else:
-            console_log('不支持的任务类型：{}'.format(data["format"]), 1)
+        raise Exception('没有找到训练任务： {}'.format(data["name"]))
     except Exception as e:
         console_log(str(e), 1)
         await sio.emit('task_states_update', {'uid': uid, 'mid': mid, 'status': '-1'})
@@ -79,6 +78,7 @@ async def disconnect():
     console_log('服务器通信链路中断，尝试重连中...', 1)
 
 async def main():
+    global running_container
     await sio.connect(args.BASE_URL)
     while True:
         try:
