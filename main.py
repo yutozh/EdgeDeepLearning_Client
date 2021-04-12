@@ -6,7 +6,7 @@ import requests
 import traceback
 import time
 from ping import ping
-from task import docker_run, docker_download_file
+from task import docker_run, docker_stop, docker_download_file
 from utils import console_log, console_init
 import argparse
 
@@ -16,6 +16,7 @@ sio = socketio.AsyncClient()
 jwt_key = ''
 uid = ''
 args = ''
+running_container = {}
 
 @sio.event
 async def connect():
@@ -24,12 +25,54 @@ async def connect():
 
 @sio.event
 async def new_task(data):
-    global args
+    global args, running_container, uid
     console_log('接收到新的任务：{}'.format(data["name"]), 3)
-    if data["format"] == "Docker镜像":
-        res = await docker_download_file(data["path"], args.log_file)
-        if res: await docker_run(data["cmd"], args.log_file)
-    await sio.emit('my response', {'response': 'my response'})
+    mid = data.get("mid", '')
+    try:
+        if mid == '':
+            raise Exception('缺少ID, 任务 {} 无效'.format(data["name"]))
+        if data["format"] == "Docker镜像":
+            # 指定名字，并添加到全局变量running_container中，方便停止
+            container_name = "container_" + str(mid)
+            running_container[mid] = container_name
+            res = await docker_download_file(data["path"], args.log_file)
+            if res:
+                if await docker_run(data["cmd"], container_name, args.log_file):
+                    console_log('训练任务启动成功', 2)
+                    await sio.emit('task_states_update', {'uid': uid, 'mid': mid, 'status': '1'})
+                    return
+            # 启动失败
+            raise Exception('训练任务启动失败')
+        else:
+            raise Exception('不支持的任务类型：{}'.format(data["format"]))
+    except Exception as e:
+        console_log(str(e), 1)
+        await sio.emit('task_states_update', {'uid': uid, 'mid': mid, 'status': '-2'})
+
+
+@sio.event
+async def stop_task(data):
+    global args, uid
+    console_log('停止任务：{}'.format(data["name"]), 3)
+    mid = data.get("mid", '')
+    try:
+        if mid == '':
+            raise Exception('缺少ID, 停止任务 {} 失败'.format(data["name"]))
+        if data["format"] == "Docker镜像":
+            container_name = running_container.get(mid, '')
+            if container_name != '':
+                if await docker_stop(container_name):
+                    console_log('训练任务停止成功', 2)
+                    await sio.emit('task_states_update', {'uid': uid, 'mid': mid, 'status': '-1'})
+                    return
+            running_container.pop(mid)
+            raise Exception('训练任务停止失败')
+        else:
+            console_log('不支持的任务类型：{}'.format(data["format"]), 1)
+    except Exception as e:
+        console_log(str(e), 1)
+        await sio.emit('task_states_update', {'uid': uid, 'mid': mid, 'status': '-1'})
+
 
 @sio.event
 async def disconnect():
@@ -42,6 +85,7 @@ async def main():
             info = getRealtimeDeviceInfo()
             info["ping"] = ping(args.host)
             info["uid"] = uid
+            info["running"] = len(running_container)
 
             if sio.connected:
                 console_log("CPU: {:d}%  MEM: {:.1f}%  PING: {:.1f}ms".format(
