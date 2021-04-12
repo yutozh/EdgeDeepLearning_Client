@@ -45,6 +45,8 @@ async def docker_run(cmd, container_name, log_file):
         cmd_list.insert(11, "--name " + container_name)
         cmd = ''.join(cmd_list)
 
+        await run_cmd_output("docker rm -f {}".format(container_name), log_file)
+        await asyncio.sleep(1)
         await run_cmd_output(cmd, log_file)
 
         # 检查运行状态
