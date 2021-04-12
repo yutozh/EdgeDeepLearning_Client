@@ -9,6 +9,7 @@ from ping import ping
 from task import docker_run, docker_stop, docker_download_file
 from utils import console_log, console_init
 import argparse
+import signal
 
 from device import getDeviceInfo, getRealtimeDeviceInfo
 sio = socketio.AsyncClient()
@@ -122,17 +123,22 @@ def register():
 
 
 if __name__ == '__main__':
-    try:
-        parser = argparse.ArgumentParser(description='Training Client')
-        parser.add_argument("--host", default='localhost', help="HOST IP")
-        parser.add_argument("-p","--port", default='8088', help="HOST PORT")
-        parser.add_argument("-l","--log_file", default="client.log", help="Log output file")
+    parser = argparse.ArgumentParser(description='Training Client')
+    parser.add_argument("--host", default='localhost', help="HOST IP")
+    parser.add_argument("-p","--port", default='8088', help="HOST PORT")
+    parser.add_argument("-l","--log_file", default="client.log", help="Log output file")
 
-        args = parser.parse_args()
+    args = parser.parse_args()
 
-        args.BASE_URL = "http://" + args.host + ":" + str(args.port)
-        args.REGISTER_URL = args.BASE_URL + '/api/device/register'
-        register()
-        asyncio.run(main())
-    except:
-        exit(1)
+    args.BASE_URL = "http://" + args.host + ":" + str(args.port)
+    args.REGISTER_URL = args.BASE_URL + '/api/device/register'
+
+    while True:
+        try:
+            register()
+            asyncio.run(main())
+        except KeyboardInterrupt:
+            exit(1)
+        except Exception as e:
+            time.sleep(10)
+            console_log(e, 1)
