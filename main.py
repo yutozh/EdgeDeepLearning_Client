@@ -77,7 +77,8 @@ async def stop_task(data):
 @sio.event
 async def reboot():
     console_log('执行重启指令...', 1)
-    await sio.sleep(3)
+    os.system("docker rm $(docker ps -aq)")
+    await sio.sleep(5)
     os.system("reboot")
 
 @sio.event
