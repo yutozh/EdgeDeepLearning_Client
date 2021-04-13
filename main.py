@@ -140,5 +140,6 @@ if __name__ == '__main__':
         except KeyboardInterrupt:
             exit(1)
         except Exception as e:
+            sio.disconnect()
             time.sleep(10)
             console_log(e, 1)
