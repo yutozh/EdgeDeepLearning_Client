@@ -69,7 +69,7 @@ async def docker_run(cmd, container_name, log_file):
 async def docker_stop(container_name):
     try:
         console_log("镜像停止...", 3)
-        res = await run_cmd_output_wait("docker stop {}".format(container_name))
+        res = await run_cmd_output_wait("docker rm -f {}".format(container_name))
         if res.decode().strip() == container_name:
             console_log("镜像停止成功", 2)
             return True
