@@ -41,7 +41,7 @@ def ping(server='example.com', count=1, wait_sec=1):
         return res['avg']
     except Exception as e:
         # print(e)
-        return '--'
+        return '0'
 
 if __name__ == '__main__':
     print(ping("localhost"))

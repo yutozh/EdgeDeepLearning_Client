@@ -10,6 +10,7 @@ from task import docker_run, docker_stop, docker_download_file
 from utils import console_log, console_init
 import argparse
 import signal
+import os
 
 from device import getDeviceInfo, getRealtimeDeviceInfo
 sio = socketio.AsyncClient()
@@ -73,6 +74,11 @@ async def stop_task(data):
         console_log(str(e), 1)
         await sio.emit('task_states_update', {'uid': uid, 'mid': mid, 'status': '-1'})
 
+@sio.event
+async def reboot():
+    console_log('执行重启指令...', 1)
+    await sio.sleep(3)
+    os.system("reboot")
 
 @sio.event
 async def disconnect():
@@ -95,6 +101,9 @@ async def main():
             await sio.sleep(5)
         except asyncio.CancelledError:
             print("Got CancelledError")
+            break
+        except Exception:
+            await sio.disconnect()
             break
     await sio.wait()
 
@@ -133,6 +142,7 @@ if __name__ == '__main__':
     args.BASE_URL = "http://" + args.host + ":" + str(args.port)
     args.REGISTER_URL = args.BASE_URL + '/api/device/register'
 
+    cnt = 0
     while True:
         try:
             register()
@@ -140,6 +150,9 @@ if __name__ == '__main__':
         except KeyboardInterrupt:
             exit(1)
         except Exception as e:
-            sio.disconnect()
-            time.sleep(10)
-            console_log(e, 1)
+            cnt += 1
+            if cnt < 10:
+                time.sleep(10)
+                console_log(e, 1)
+            else:
+                os.system("reboot")
