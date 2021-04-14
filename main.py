@@ -103,7 +103,8 @@ async def main():
         except asyncio.CancelledError:
             print("Got CancelledError")
             break
-        except Exception:
+        except Exception as e:
+            print("Exception:: ", e)
             await sio.disconnect()
             break
     await sio.wait()
