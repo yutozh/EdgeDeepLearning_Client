@@ -97,7 +97,7 @@ async def main():
 
             if sio.connected:
                 console_log("CPU: {:d}%  MEM: {:.1f}%  PING: {:.1f}ms".format(
-                    int(info["cpu_ing"]), float(info["memory_ing"])/float(info["memory"]), float(info["ping"])))
+                    int(info["cpu_ing"]), float(info["memory_ing"]) * 100 /float(info["memory"]), float(info["ping"])))
                 await sio.emit('heart', info)
             await sio.sleep(5)
         except asyncio.CancelledError:

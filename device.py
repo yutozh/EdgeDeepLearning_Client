@@ -918,6 +918,8 @@ def getRealtimeDeviceInfo():
     }
 
 if __name__ == '__main__':
+    info = getRealtimeDeviceInfo()
+    print(float(info["memory_ing"]) *100 /float(info["memory"]))
     print(getDeviceInfo())
     print(getRealtimeDeviceInfo())
     print(GetMemInfo())
